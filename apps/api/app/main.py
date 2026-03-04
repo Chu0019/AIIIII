@@ -1,17 +1,29 @@
 import math
+import time
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, text
 from .database import Base, engine, get_db
 from .models import Airport, FlightPlan
 from .schemas import AirportOut, FlightPlanCreate, FlightPlanOut, FlightPlanUpdate
 from .seed import seed_demo_data
 
-app = FastAPI(title="Navi Planner API", version="0.2.0")
+app = FastAPI(title="Navi Planner API", version="0.2.1")
 
 
 @app.on_event("startup")
 def startup():
+    # 等待資料庫就緒（避免容器剛啟動時 connection refused）
+    for i in range(30):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            break
+        except Exception:
+            if i == 29:
+                raise
+            time.sleep(1)
+
     Base.metadata.create_all(bind=engine)
     with next(get_db()) as db:
         seed_demo_data(db)
@@ -122,8 +134,8 @@ def export_flight_plan(flight_plan_id: str, format: str = Query(default="json"),
     if format == "json":
         return {"format": "json", "data": data}
     if format == "pln":
-        text = f"[PLN]\nDEP={fp.dep_icao}\nARR={fp.arr_icao}\nROUTE={fp.route_text or ''}\nFL={fp.flight_level or ''}"
-        return {"format": "pln", "content": text}
+        text_pln = f"[PLN]\nDEP={fp.dep_icao}\nARR={fp.arr_icao}\nROUTE={fp.route_text or ''}\nFL={fp.flight_level or ''}"
+        return {"format": "pln", "content": text_pln}
 
-    text = f"I\n3 version\n1\n{fp.dep_icao}\n{fp.arr_icao}\n{fp.route_text or ''}"
-    return {"format": "fms", "content": text}
+    text_fms = f"I\n3 version\n1\n{fp.dep_icao}\n{fp.arr_icao}\n{fp.route_text or ''}"
+    return {"format": "fms", "content": text_fms}
