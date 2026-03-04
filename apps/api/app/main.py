@@ -1,6 +1,7 @@
 import math
 import time
 from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 from .database import Base, engine, get_db
@@ -8,7 +9,15 @@ from .models import Airport, FlightPlan
 from .schemas import AirportOut, FlightPlanCreate, FlightPlanOut, FlightPlanUpdate
 from .seed import seed_demo_data
 
-app = FastAPI(title="Navi Planner API", version="0.2.1")
+app = FastAPI(title="Navi Planner API", version="0.2.2")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
