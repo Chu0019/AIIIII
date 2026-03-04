@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-type Airport = { icao: string; iata?: string; name: string }
+type Airport = { icao: string; iata?: string; name: string; lat?: number; lon?: number }
 type FlightPlan = { id: string; dep_icao: string; arr_icao: string; flight_level?: number }
 type Weather = { temperature_c?: number; wind_speed_kmh?: number; wind_direction_deg?: number; weather_code?: number }
 
@@ -24,6 +24,12 @@ export default function HomePage() {
   const [arrWeather, setArrWeather] = useState<Weather | null>(null)
   const [msg, setMsg] = useState('')
 
+  const mapRef = useRef<any>(null)
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const depAirport = useMemo(() => airports.find((a) => a.icao === dep), [airports, dep])
+  const arrAirport = useMemo(() => airports.find((a) => a.icao === arr), [airports, arr])
+
   const authFetch = (url: string, init: RequestInit = {}) => {
     return fetch(url, {
       ...init,
@@ -41,10 +47,7 @@ export default function HomePage() {
       body: JSON.stringify({ email, password }),
     })
     const data = await res.json()
-    if (!res.ok) {
-      setMsg(data.detail || '登入失敗')
-      return
-    }
+    if (!res.ok) return setMsg(data.detail || '登入失敗')
     setToken(data.access_token)
     localStorage.setItem('token', data.access_token)
     setMsg('登入成功')
@@ -57,10 +60,7 @@ export default function HomePage() {
       body: JSON.stringify({ email, password, name: email.split('@')[0] }),
     })
     const data = await res.json()
-    if (!res.ok) {
-      setMsg(data.detail || '註冊失敗')
-      return
-    }
+    if (!res.ok) return setMsg(data.detail || '註冊失敗')
     setToken(data.access_token)
     localStorage.setItem('token', data.access_token)
     setMsg('註冊成功')
@@ -96,13 +96,66 @@ export default function HomePage() {
     if (!flightPlanId && plans.length > 0) setFlightPlanId(plans[0].id)
   }, [plans, flightPlanId])
 
-  useEffect(() => {
-    loadWeather(dep, setDepWeather).catch(() => setDepWeather(null))
-  }, [dep])
+  useEffect(() => { loadWeather(dep, setDepWeather).catch(() => setDepWeather(null)) }, [dep])
+  useEffect(() => { loadWeather(arr, setArrWeather).catch(() => setArrWeather(null)) }, [arr])
 
   useEffect(() => {
-    loadWeather(arr, setArrWeather).catch(() => setArrWeather(null))
-  }, [arr])
+    const mount = async () => {
+      if (!mapContainerRef.current || !depAirport?.lat || !arrAirport?.lat) return
+      const maplibregl = (await import('maplibre-gl')).default
+
+      if (!mapRef.current) {
+        mapRef.current = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: 'https://demotiles.maplibre.org/style.json',
+          center: [depAirport.lon || 0, depAirport.lat || 0],
+          zoom: 3,
+        })
+      }
+
+      const map = mapRef.current
+      const routeGeo = {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [depAirport.lon, depAirport.lat],
+                [arrAirport.lon, arrAirport.lat],
+              ],
+            },
+            properties: {},
+          },
+        ],
+      } as any
+
+      const renderRoute = () => {
+        if (map.getSource('route')) {
+          map.getSource('route').setData(routeGeo)
+        } else {
+          map.addSource('route', { type: 'geojson', data: routeGeo })
+          map.addLayer({
+            id: 'route-line',
+            type: 'line',
+            source: 'route',
+            paint: { 'line-color': '#2563eb', 'line-width': 3 },
+          })
+        }
+
+        const bounds = new maplibregl.LngLatBounds()
+        bounds.extend([depAirport.lon!, depAirport.lat!])
+        bounds.extend([arrAirport.lon!, arrAirport.lat!])
+        map.fitBounds(bounds, { padding: 40, duration: 500 })
+      }
+
+      if (map.isStyleLoaded()) renderRoute()
+      else map.once('load', renderRoute)
+    }
+
+    mount().catch(() => {})
+  }, [depAirport, arrAirport])
 
   const createPlan = async () => {
     const res = await authFetch(`${API_BASE}/v1/flight-plans`, {
@@ -142,9 +195,9 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 980, margin: '0 auto' }}>
+    <main style={{ padding: 24, maxWidth: 1080, margin: '0 auto' }}>
       <h1>AIIIII · Navi Planner</h1>
-      <p>第 3 批：JWT 登入 + 多使用者資料隔離</p>
+      <p>第 4 批：MapLibre 地圖 + 航線可視化</p>
 
       <section style={{ border: '1px solid #ddd', padding: 12, borderRadius: 8 }}>
         <h2>登入 / 註冊</h2>
@@ -154,6 +207,12 @@ export default function HomePage() {
         <button onClick={signup}>註冊</button>{' '}
         <button onClick={() => { localStorage.removeItem('token'); setToken(''); setPlans([]) }}>登出</button>
         <p>{token ? '已登入' : '未登入'}｜{msg}</p>
+      </section>
+
+      <section style={{ marginTop: 16, border: '1px solid #ddd', padding: 16, borderRadius: 8 }}>
+        <h2>航線地圖</h2>
+        <div ref={mapContainerRef} style={{ width: '100%', height: 360, borderRadius: 8, overflow: 'hidden' }} />
+        <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>{dep} → {arr}</div>
       </section>
 
       <section style={{ marginTop: 16, border: '1px solid #ddd', padding: 16, borderRadius: 8 }}>
@@ -176,22 +235,10 @@ export default function HomePage() {
         <section style={{ marginTop: 16, border: '1px solid #ddd', padding: 16, borderRadius: 8 }}>
           <h2>計算結果</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, 1fr))', gap: 12 }}>
-            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 12, color: '#666' }}>距離</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{compute.distance_nm} <span style={{ fontSize: 14 }}>NM</span></div>
-            </div>
-            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 12, color: '#666' }}>ETE</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>
-                {Math.floor((compute.ete_hr || 0) * 60 / 60)}h {(Math.round((compute.ete_hr || 0) * 60) % 60).toString().padStart(2, '0')}m
-              </div>
-            </div>
-            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 12, color: '#666' }}>預估燃油</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{compute.fuel_estimate_kg} <span style={{ fontSize: 14 }}>kg</span></div>
-            </div>
+            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}><div style={{ fontSize: 12, color: '#666' }}>距離</div><div style={{ fontSize: 24, fontWeight: 700 }}>{compute.distance_nm} NM</div></div>
+            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}><div style={{ fontSize: 12, color: '#666' }}>ETE</div><div style={{ fontSize: 24, fontWeight: 700 }}>{Math.floor((compute.ete_hr || 0) * 60 / 60)}h {(Math.round((compute.ete_hr || 0) * 60) % 60).toString().padStart(2, '0')}m</div></div>
+            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}><div style={{ fontSize: 12, color: '#666' }}>預估燃油</div><div style={{ fontSize: 24, fontWeight: 700 }}>{compute.fuel_estimate_kg} kg</div></div>
           </div>
-          <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>Flight Plan ID: {compute.flight_plan_id}</div>
         </section>
       )}
 
@@ -209,11 +256,6 @@ export default function HomePage() {
             </div>
           </div>
         ))}
-      </section>
-
-      <section style={{ marginTop: 16 }}>
-        <h2>機場清單</h2>
-        <ul>{airports.map((a) => <li key={a.icao}>{a.icao} / {a.iata} - {a.name}</li>)}</ul>
       </section>
     </main>
   )
