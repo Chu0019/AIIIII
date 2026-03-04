@@ -93,6 +93,10 @@ export default function HomePage() {
   }, [token])
 
   useEffect(() => {
+    if (!flightPlanId && plans.length > 0) setFlightPlanId(plans[0].id)
+  }, [plans, flightPlanId])
+
+  useEffect(() => {
     loadWeather(dep, setDepWeather).catch(() => setDepWeather(null))
   }, [dep])
 
@@ -168,7 +172,28 @@ export default function HomePage() {
         <div>ARR {arr}: {arrWeather?.temperature_c ?? '-'}°C / wind {arrWeather?.wind_speed_kmh ?? '-'} km/h</div>
       </section>
 
-      {compute && <section style={{ marginTop: 16 }}><h2>計算結果</h2><pre>{JSON.stringify(compute, null, 2)}</pre></section>}
+      {compute && (
+        <section style={{ marginTop: 16, border: '1px solid #ddd', padding: 16, borderRadius: 8 }}>
+          <h2>計算結果</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, 1fr))', gap: 12 }}>
+            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
+              <div style={{ fontSize: 12, color: '#666' }}>距離</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{compute.distance_nm} <span style={{ fontSize: 14 }}>NM</span></div>
+            </div>
+            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
+              <div style={{ fontSize: 12, color: '#666' }}>ETE</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>
+                {Math.floor((compute.ete_hr || 0) * 60 / 60)}h {(Math.round((compute.ete_hr || 0) * 60) % 60).toString().padStart(2, '0')}m
+              </div>
+            </div>
+            <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
+              <div style={{ fontSize: 12, color: '#666' }}>預估燃油</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{compute.fuel_estimate_kg} <span style={{ fontSize: 14 }}>kg</span></div>
+            </div>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>Flight Plan ID: {compute.flight_plan_id}</div>
+        </section>
+      )}
 
       <section style={{ marginTop: 16, border: '1px solid #ddd', padding: 16, borderRadius: 8 }}>
         <h2>Flight Plan 歷史</h2>
