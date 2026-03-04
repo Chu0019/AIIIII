@@ -1,26 +1,28 @@
 # AIIIII
 
-Navi Planner Monorepo (MVP skeleton)
+Navi Planner 單一儲存庫（Monorepo）MVP 骨架。
 
-## Structure
+## 專案結構
 
-- `apps/api` - FastAPI backend
-- `apps/web` - Next.js frontend
-- `infra` - DB schema
-- `docs` - roadmap/api docs
+- `apps/api`：FastAPI 後端
+- `apps/web`：Next.js 前端
+- `infra`：資料庫 Schema
+- `docs`：產品規劃與 API 文件
 
-## Run with Docker
+## 使用 Docker 啟動
 
 ```bash
 docker compose up --build
 ```
 
-- Web: http://localhost:3000
-- API: http://localhost:8000/health
+啟動後可開啟：
+- Web：<http://localhost:3000>
+- API 健康檢查：<http://localhost:8000/health>
 
-## Local run (without Docker)
+## 本機啟動（不使用 Docker）
 
-### API
+### 啟動 API
+
 ```bash
 cd apps/api
 python -m venv .venv && source .venv/bin/activate
@@ -28,7 +30,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Web
+### 啟動 Web
+
 ```bash
 cd apps/web
 npm install
