@@ -191,7 +191,13 @@ export default function HomePage() {
       }
 
       const map = mapRef.current
-      const arc = greatCirclePoints(depAirport.lat!, depAirport.lon!, arrAirport.lat!, arrAirport.lon!, 96)
+      const depLat = Number(depAirport.lat)
+      const depLon = Number(depAirport.lon)
+      const arrLat = Number(arrAirport.lat)
+      const arrLon = Number(arrAirport.lon)
+      if (![depLat, depLon, arrLat, arrLon].every((n) => Number.isFinite(n))) return
+
+      const arc = greatCirclePoints(depLat, depLon, arrLat, arrLon, 96)
       const lineParts = splitForMap(arc)
       const routeGeo = {
         type: 'FeatureCollection',
@@ -210,8 +216,19 @@ export default function HomePage() {
       const pointsGeo = {
         type: 'FeatureCollection',
         features: [
-          { type: 'Feature', geometry: { type: 'Point', coordinates: [depAirport.lon, depAirport.lat] }, properties: { label: depAirport.icao } },
-          { type: 'Feature', geometry: { type: 'Point', coordinates: [arrAirport.lon, arrAirport.lat] }, properties: { label: arrAirport.icao } },
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [depLon, depLat] }, properties: { label: depAirport.icao } },
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [arrLon, arrLat] }, properties: { label: arrAirport.icao } },
+        ],
+      } as any
+
+      const directGeo = {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: [[depLon, depLat], [arrLon, arrLat]] },
+            properties: {},
+          },
         ],
       } as any
 
@@ -248,8 +265,21 @@ export default function HomePage() {
           })
         }
 
-        const lonA = depAirport.lon!
-        const lonB = arrAirport.lon!
+        // 除了大圓弧，也加一條直接線當可視化保底
+        if (map.getSource('route-direct')) {
+          map.getSource('route-direct').setData(directGeo)
+        } else {
+          map.addSource('route-direct', { type: 'geojson', data: directGeo })
+          map.addLayer({
+            id: 'route-direct-line',
+            type: 'line',
+            source: 'route-direct',
+            paint: { 'line-color': '#f59e0b', 'line-width': 2, 'line-dasharray': [2, 2], 'line-opacity': 0.9 },
+          })
+        }
+
+        const lonA = depLon
+        const lonB = arrLon
         const crossesDateLine = Math.abs(lonA - lonB) > 180
 
         if (crossesDateLine) {
