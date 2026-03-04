@@ -3,8 +3,8 @@
 可實際啟動的 Navi Planner（Monorepo）MVP。
 
 目前已完成：
-- 前端：Next.js（建立 Flight Plan、歷史列表、刪除、匯出下載、計算）
-- 後端：FastAPI（Flight Plan CRUD + 匯出 + 機場查詢）
+- 前端：Next.js（建立 Flight Plan、歷史列表、刪除、匯出下載、計算、天氣卡）
+- 後端：FastAPI（Flight Plan CRUD + 匯出 + 機場查詢 + 即時天氣）
 - 容器：Docker Compose（Web / API / Postgres）
 
 ---
@@ -66,6 +66,7 @@ npm run dev
 
 - `GET /health`
 - `GET /v1/airports?query=RJTT`
+- `GET /v1/weather/{icao}`
 - `GET /v1/flight-plans?user_id=demo-user`
 - `POST /v1/flight-plans`
 - `GET /v1/flight-plans/{id}`

@@ -16,6 +16,12 @@ Base URL：`http://localhost:8000`
 ### `GET /v1/airports?query=RJTT`
 - `query` 可選，支援 ICAO/IATA/名稱關鍵字
 
+## 天氣
+
+### `GET /v1/weather/{icao}`
+- 依機場座標查詢即時天氣（Open-Meteo）
+- 回傳：溫度、風速、風向、天氣碼、觀測時間
+
 ## Flight Plans
 
 ### `POST /v1/flight-plans`

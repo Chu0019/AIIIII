@@ -19,6 +19,16 @@ type FlightPlan = {
   created_at?: string
 }
 
+type Weather = {
+  icao: string
+  name: string
+  temperature_c?: number
+  wind_speed_kmh?: number
+  wind_direction_deg?: number
+  weather_code?: number
+  observed_at?: string
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
 
 export default function HomePage() {
@@ -30,6 +40,8 @@ export default function HomePage() {
   const [flightLevel, setFlightLevel] = useState(350)
   const [flightPlanId, setFlightPlanId] = useState('')
   const [compute, setCompute] = useState<any>(null)
+  const [depWeather, setDepWeather] = useState<Weather | null>(null)
+  const [arrWeather, setArrWeather] = useState<Weather | null>(null)
   const [msg, setMsg] = useState('')
 
   const loadAirports = async () => {
@@ -44,10 +56,29 @@ export default function HomePage() {
     setPlans(data || [])
   }
 
+  const loadWeather = async (icao: string, setter: (w: Weather | null) => void) => {
+    if (!icao) return
+    const res = await fetch(`${API_BASE}/v1/weather/${icao}`)
+    if (!res.ok) {
+      setter(null)
+      return
+    }
+    const data = await res.json()
+    setter(data)
+  }
+
   useEffect(() => {
     loadAirports().catch(() => setAirports([]))
     loadPlans().catch(() => setPlans([]))
   }, [])
+
+  useEffect(() => {
+    loadWeather(dep, setDepWeather).catch(() => setDepWeather(null))
+  }, [dep])
+
+  useEffect(() => {
+    loadWeather(arr, setArrWeather).catch(() => setArrWeather(null))
+  }, [arr])
 
   const createPlan = async () => {
     setMsg('建立中...')
@@ -129,6 +160,34 @@ export default function HomePage() {
           <button onClick={() => computePlan()} disabled={!flightPlanId}>計算目前航班</button>
         </div>
         <p>{msg}</p>
+      </section>
+
+      <section style={{ marginTop: 16, border: '1px solid #ddd', padding: 16, borderRadius: 8 }}>
+        <h2>即時天氣（Open-Meteo）</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
+            <strong>出發 {dep}</strong>
+            {depWeather ? (
+              <ul>
+                <li>溫度：{depWeather.temperature_c} °C</li>
+                <li>風速：{depWeather.wind_speed_kmh} km/h</li>
+                <li>風向：{depWeather.wind_direction_deg}°</li>
+                <li>Weather code：{depWeather.weather_code}</li>
+              </ul>
+            ) : <p>查無資料</p>}
+          </div>
+          <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
+            <strong>目的 {arr}</strong>
+            {arrWeather ? (
+              <ul>
+                <li>溫度：{arrWeather.temperature_c} °C</li>
+                <li>風速：{arrWeather.wind_speed_kmh} km/h</li>
+                <li>風向：{arrWeather.wind_direction_deg}°</li>
+                <li>Weather code：{arrWeather.weather_code}</li>
+              </ul>
+            ) : <p>查無資料</p>}
+          </div>
+        </div>
       </section>
 
       {compute && (

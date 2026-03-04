@@ -1,5 +1,6 @@
 import math
 import time
+import httpx
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -52,6 +53,40 @@ def list_airports(query: str = Query(default=""), db: Session = Depends(get_db))
     if not q:
         return rows
     return [a for a in rows if q in a.icao.upper() or (a.iata and q in a.iata.upper()) or q in a.name.upper()]
+
+
+@app.get("/v1/weather/{icao}")
+def get_weather(icao: str, db: Session = Depends(get_db)):
+    airport = db.get(Airport, icao.upper())
+    if not airport:
+        raise HTTPException(status_code=404, detail="airport not found")
+
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": airport.lat,
+        "longitude": airport.lon,
+        "current": "temperature_2m,wind_speed_10m,wind_direction_10m,weather_code",
+        "timezone": "UTC",
+    }
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.get(url, params=params)
+            resp.raise_for_status()
+            payload = resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"weather upstream error: {e}")
+
+    current = payload.get("current", {})
+    return {
+        "icao": airport.icao,
+        "name": airport.name,
+        "temperature_c": current.get("temperature_2m"),
+        "wind_speed_kmh": current.get("wind_speed_10m"),
+        "wind_direction_deg": current.get("wind_direction_10m"),
+        "weather_code": current.get("weather_code"),
+        "observed_at": current.get("time"),
+    }
 
 
 @app.get("/v1/flight-plans", response_model=list[FlightPlanOut])
