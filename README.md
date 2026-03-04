@@ -21,8 +21,18 @@
 
 ## 一鍵啟動（Docker）
 
+### macOS / Linux
+
 ```bash
-docker compose up --build
+./start.sh
+```
+
+### Windows
+
+雙擊 `start.bat`（或在命令列執行）
+
+```bat
+start.bat
 ```
 
 啟動後：
