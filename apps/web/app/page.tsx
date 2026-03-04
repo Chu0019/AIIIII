@@ -52,6 +52,30 @@ function greatCirclePoints(lat1: number, lon1: number, lat2: number, lon2: numbe
   return unwrapped
 }
 
+function splitForMap(coords: number[][]) {
+  if (coords.length < 2) return [coords]
+
+  const wrapLon = (lon: number) => ((((lon + 180) % 360) + 360) % 360) - 180
+  const wrapped = coords.map(([lon, lat]) => [wrapLon(lon), lat])
+
+  const lines: number[][][] = []
+  let current: number[][] = [wrapped[0]]
+
+  for (let i = 1; i < wrapped.length; i++) {
+    const prev = wrapped[i - 1][0]
+    const now = wrapped[i][0]
+    if (Math.abs(now - prev) > 180) {
+      if (current.length > 1) lines.push(current)
+      current = [wrapped[i]]
+    } else {
+      current.push(wrapped[i])
+    }
+  }
+
+  if (current.length > 1) lines.push(current)
+  return lines.length ? lines : [wrapped]
+}
+
 export default function HomePage() {
   const [token, setToken] = useState('')
   const [email, setEmail] = useState('demo@example.com')
@@ -154,18 +178,21 @@ export default function HomePage() {
           style: 'https://demotiles.maplibre.org/style.json',
           center: [depAirport.lon || 0, depAirport.lat || 0],
           zoom: 3,
+          renderWorldCopies: false,
         })
       }
 
       const map = mapRef.current
+      const arc = greatCirclePoints(depAirport.lat!, depAirport.lon!, arrAirport.lat!, arrAirport.lon!, 96)
+      const lineParts = splitForMap(arc)
       const routeGeo = {
         type: 'FeatureCollection',
         features: [
           {
             type: 'Feature',
             geometry: {
-              type: 'LineString',
-              coordinates: greatCirclePoints(depAirport.lat!, depAirport.lon!, arrAirport.lat!, arrAirport.lon!, 96),
+              type: lineParts.length > 1 ? 'MultiLineString' : 'LineString',
+              coordinates: lineParts.length > 1 ? lineParts : lineParts[0],
             },
             properties: {},
           },
@@ -185,10 +212,22 @@ export default function HomePage() {
           })
         }
 
-        const bounds = new maplibregl.LngLatBounds()
-        bounds.extend([depAirport.lon!, depAirport.lat!])
-        bounds.extend([arrAirport.lon!, arrAirport.lat!])
-        map.fitBounds(bounds, { padding: 40, duration: 500 })
+        const lonA = depAirport.lon!
+        const lonB = arrAirport.lon!
+        const crossesDateLine = Math.abs(lonA - lonB) > 180
+
+        if (crossesDateLine) {
+          map.easeTo({
+            center: [180, (depAirport.lat! + arrAirport.lat!) / 2],
+            zoom: 2,
+            duration: 500,
+          })
+        } else {
+          const bounds = new maplibregl.LngLatBounds()
+          bounds.extend([lonA, depAirport.lat!])
+          bounds.extend([lonB, arrAirport.lat!])
+          map.fitBounds(bounds, { padding: 40, duration: 500 })
+        }
       }
 
       if (map.isStyleLoaded()) renderRoute()
