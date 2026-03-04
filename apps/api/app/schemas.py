@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr
 
 
 class AirportOut(BaseModel):
@@ -14,8 +14,23 @@ class AirportOut(BaseModel):
         from_attributes = True
 
 
+class UserSignup(BaseModel):
+    email: EmailStr
+    password: str
+    name: str | None = None
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
 class FlightPlanCreate(BaseModel):
-    user_id: str = Field(default="demo-user")
     dep_icao: str
     arr_icao: str
     route_text: str | None = None

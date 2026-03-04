@@ -16,6 +16,17 @@ Base URL：`http://localhost:8000`
 ### `GET /v1/airports?query=RJTT`
 - `query` 可選，支援 ICAO/IATA/名稱關鍵字
 
+## 認證
+
+### `POST /v1/auth/signup`
+註冊並回傳 JWT。
+
+### `POST /v1/auth/login`
+登入並回傳 JWT。
+
+### `GET /v1/auth/me`
+需 Bearer Token。
+
 ## 天氣
 
 ### `GET /v1/weather/{icao}`
@@ -40,8 +51,8 @@ Base URL：`http://localhost:8000`
 }
 ```
 
-### `GET /v1/flight-plans?user_id=demo-user`
-取得航班列表。
+### `GET /v1/flight-plans`
+取得當前登入使用者的航班列表（需 Bearer Token）。
 
 ### `GET /v1/flight-plans/{id}`
 取得單一航班。
