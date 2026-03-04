@@ -24,7 +24,7 @@ function greatCirclePoints(lat1: number, lon1: number, lat2: number, lon2: numbe
 
   if (!isFinite(δ) || δ === 0) return [[lon1, lat1], [lon2, lat2]]
 
-  const coords: number[][] = []
+  const raw: number[][] = []
   for (let i = 0; i <= steps; i++) {
     const f = i / steps
     const A = Math.sin((1 - f) * δ) / Math.sin(δ)
@@ -36,9 +36,20 @@ function greatCirclePoints(lat1: number, lon1: number, lat2: number, lon2: numbe
 
     const φ = Math.atan2(z, Math.sqrt(x * x + y * y))
     const λ = Math.atan2(y, x)
-    coords.push([toDeg(λ), toDeg(φ)])
+    raw.push([toDeg(λ), toDeg(φ)])
   }
-  return coords
+
+  // anti-meridian 展開：避免 +179 -> -179 被畫成穿越整個歐亞非的直線
+  const unwrapped: number[][] = [raw[0]]
+  for (let i = 1; i < raw.length; i++) {
+    let lon = raw[i][0]
+    const prev = unwrapped[i - 1][0]
+    while (lon - prev > 180) lon -= 360
+    while (lon - prev < -180) lon += 360
+    unwrapped.push([lon, raw[i][1]])
+  }
+
+  return unwrapped
 }
 
 export default function HomePage() {
