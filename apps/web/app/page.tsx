@@ -8,6 +8,39 @@ type Weather = { temperature_c?: number; wind_speed_kmh?: number; wind_direction
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
 
+function toRad(d: number) { return (d * Math.PI) / 180 }
+function toDeg(r: number) { return (r * 180) / Math.PI }
+
+function greatCirclePoints(lat1: number, lon1: number, lat2: number, lon2: number, steps = 64) {
+  const φ1 = toRad(lat1)
+  const λ1 = toRad(lon1)
+  const φ2 = toRad(lat2)
+  const λ2 = toRad(lon2)
+
+  const sinΔφ = Math.sin((φ2 - φ1) / 2)
+  const sinΔλ = Math.sin((λ2 - λ1) / 2)
+  const a = sinΔφ * sinΔφ + Math.cos(φ1) * Math.cos(φ2) * sinΔλ * sinΔλ
+  const δ = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  if (!isFinite(δ) || δ === 0) return [[lon1, lat1], [lon2, lat2]]
+
+  const coords: number[][] = []
+  for (let i = 0; i <= steps; i++) {
+    const f = i / steps
+    const A = Math.sin((1 - f) * δ) / Math.sin(δ)
+    const B = Math.sin(f * δ) / Math.sin(δ)
+
+    const x = A * Math.cos(φ1) * Math.cos(λ1) + B * Math.cos(φ2) * Math.cos(λ2)
+    const y = A * Math.cos(φ1) * Math.sin(λ1) + B * Math.cos(φ2) * Math.sin(λ2)
+    const z = A * Math.sin(φ1) + B * Math.sin(φ2)
+
+    const φ = Math.atan2(z, Math.sqrt(x * x + y * y))
+    const λ = Math.atan2(y, x)
+    coords.push([toDeg(λ), toDeg(φ)])
+  }
+  return coords
+}
+
 export default function HomePage() {
   const [token, setToken] = useState('')
   const [email, setEmail] = useState('demo@example.com')
@@ -121,10 +154,7 @@ export default function HomePage() {
             type: 'Feature',
             geometry: {
               type: 'LineString',
-              coordinates: [
-                [depAirport.lon, depAirport.lat],
-                [arrAirport.lon, arrAirport.lat],
-              ],
+              coordinates: greatCirclePoints(depAirport.lat!, depAirport.lon!, arrAirport.lat!, arrAirport.lon!, 96),
             },
             properties: {},
           },
