@@ -205,6 +205,14 @@ export default function HomePage() {
         ],
       } as any
 
+      const pointsGeo = {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [depAirport.lon, depAirport.lat] }, properties: { label: depAirport.icao } },
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [arrAirport.lon, arrAirport.lat] }, properties: { label: arrAirport.icao } },
+        ],
+      } as any
+
       const renderRoute = () => {
         if (map.getSource('route')) {
           map.getSource('route').setData(routeGeo)
@@ -214,7 +222,27 @@ export default function HomePage() {
             id: 'route-line',
             type: 'line',
             source: 'route',
-            paint: { 'line-color': '#2563eb', 'line-width': 3 },
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#ff2d55', 'line-width': 5, 'line-opacity': 0.95 },
+          })
+        }
+
+        if (map.getSource('route-points')) {
+          map.getSource('route-points').setData(pointsGeo)
+        } else {
+          map.addSource('route-points', { type: 'geojson', data: pointsGeo })
+          map.addLayer({
+            id: 'route-points-circle',
+            type: 'circle',
+            source: 'route-points',
+            paint: { 'circle-radius': 5, 'circle-color': '#111827', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' },
+          })
+          map.addLayer({
+            id: 'route-points-label',
+            type: 'symbol',
+            source: 'route-points',
+            layout: { 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.2] },
+            paint: { 'text-color': '#111827', 'text-halo-color': '#ffffff', 'text-halo-width': 1 },
           })
         }
 
