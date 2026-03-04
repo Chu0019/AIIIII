@@ -34,12 +34,17 @@ Base URL：`http://localhost:8000`
 }
 ```
 
+### `GET /v1/flight-plans?user_id=demo-user`
+取得航班列表。
+
 ### `GET /v1/flight-plans/{id}`
-取得航班。
+取得單一航班。
 
 ### `PATCH /v1/flight-plans/{id}`
 更新 `route_text` / `flight_level` / `cycle`。
 
+### `DELETE /v1/flight-plans/{id}`
+刪除航班。
 ### `POST /v1/flight-plans/{id}/compute`
 計算直飛距離、ETE、燃油估算。
 

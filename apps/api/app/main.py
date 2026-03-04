@@ -2,6 +2,7 @@ import math
 import time
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 from .database import Base, engine, get_db
@@ -53,6 +54,12 @@ def list_airports(query: str = Query(default=""), db: Session = Depends(get_db))
     return [a for a in rows if q in a.icao.upper() or (a.iata and q in a.iata.upper()) or q in a.name.upper()]
 
 
+@app.get("/v1/flight-plans", response_model=list[FlightPlanOut])
+def list_flight_plans(user_id: str = Query(default="demo-user"), db: Session = Depends(get_db)):
+    stmt = select(FlightPlan).where(FlightPlan.user_id == user_id).order_by(FlightPlan.created_at.desc())
+    return db.execute(stmt).scalars().all()
+
+
 @app.post("/v1/flight-plans", response_model=FlightPlanOut)
 def create_flight_plan(payload: FlightPlanCreate, db: Session = Depends(get_db)):
     if not db.get(Airport, payload.dep_icao):
@@ -87,6 +94,16 @@ def update_flight_plan(flight_plan_id: str, payload: FlightPlanUpdate, db: Sessi
     db.commit()
     db.refresh(fp)
     return fp
+
+
+@app.delete("/v1/flight-plans/{flight_plan_id}")
+def delete_flight_plan(flight_plan_id: str, db: Session = Depends(get_db)):
+    fp = db.get(FlightPlan, flight_plan_id)
+    if not fp:
+        raise HTTPException(status_code=404, detail="flight plan not found")
+    db.delete(fp)
+    db.commit()
+    return {"ok": True}
 
 
 def haversine_nm(lat1, lon1, lat2, lon2):
@@ -129,22 +146,35 @@ def export_flight_plan(flight_plan_id: str, format: str = Query(default="json"),
     if not fp:
         raise HTTPException(status_code=404, detail="flight plan not found")
 
-    data = {
-        "id": fp.id,
-        "dep": fp.dep_icao,
-        "arr": fp.arr_icao,
-        "route": fp.route_text or "",
-        "fl": fp.flight_level,
-    }
-
     if format not in ["json", "pln", "fms"]:
         raise HTTPException(status_code=400, detail="format must be json|pln|fms")
 
+    filename = f"flightplan-{fp.id}.{format}"
+
     if format == "json":
-        return {"format": "json", "data": data}
+        data = {
+            "id": fp.id,
+            "dep": fp.dep_icao,
+            "arr": fp.arr_icao,
+            "route": fp.route_text or "",
+            "fl": fp.flight_level,
+        }
+        return JSONResponse(
+            content=data,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
     if format == "pln":
         text_pln = f"[PLN]\nDEP={fp.dep_icao}\nARR={fp.arr_icao}\nROUTE={fp.route_text or ''}\nFL={fp.flight_level or ''}"
-        return {"format": "pln", "content": text_pln}
+        return PlainTextResponse(
+            content=text_pln,
+            media_type="text/plain",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     text_fms = f"I\n3 version\n1\n{fp.dep_icao}\n{fp.arr_icao}\n{fp.route_text or ''}"
-    return {"format": "fms", "content": text_fms}
+    return PlainTextResponse(
+        content=text_fms,
+        media_type="text/plain",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

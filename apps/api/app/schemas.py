@@ -38,6 +38,7 @@ class FlightPlanOut(BaseModel):
     flight_level: int | None = None
     cycle: str | None = None
     created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     class Config:
         from_attributes = True
