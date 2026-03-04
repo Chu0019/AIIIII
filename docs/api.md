@@ -1,22 +1,47 @@
-# API Draft
+# API 文件（MVP v0.2）
 
-## Auth
-- POST /v1/auth/signup
-- POST /v1/auth/login
-- GET /v1/auth/me
+Base URL：`http://localhost:8000`
 
-## Airports/Navdata
-- GET /v1/airports?query=RJTT
-- GET /v1/airports/{icao}
-- GET /v1/procedures?airport=RJTT&type=SID
-- GET /v1/waypoints?query=ABRAM
+## 健康檢查
+
+### `GET /health`
+回傳：
+
+```json
+{ "ok": true }
+```
+
+## 機場
+
+### `GET /v1/airports?query=RJTT`
+- `query` 可選，支援 ICAO/IATA/名稱關鍵字
 
 ## Flight Plans
-- POST /v1/flight-plans
-- GET /v1/flight-plans/{id}
-- PATCH /v1/flight-plans/{id}
-- POST /v1/flight-plans/{id}/compute
-- POST /v1/flight-plans/{id}/export
 
-## Weather
-- GET /v1/weather/{icao}
+### `POST /v1/flight-plans`
+建立航班。
+
+請求範例：
+
+```json
+{
+  "user_id": "demo-user",
+  "dep_icao": "RJTT",
+  "arr_icao": "RCTP",
+  "route_text": "DCT",
+  "flight_level": 350,
+  "cycle": "2503"
+}
+```
+
+### `GET /v1/flight-plans/{id}`
+取得航班。
+
+### `PATCH /v1/flight-plans/{id}`
+更新 `route_text` / `flight_level` / `cycle`。
+
+### `POST /v1/flight-plans/{id}/compute`
+計算直飛距離、ETE、燃油估算。
+
+### `POST /v1/flight-plans/{id}/export?format=json|pln|fms`
+匯出航班內容（MVP 為簡化格式）。
