@@ -185,7 +185,9 @@ export default function HomePage() {
         try {
           mapRef.current.setProjection({ type: 'globe' } as any)
         } catch (_) {}
-        mapRef.current.setFog({})
+        try {
+          mapRef.current.setFog({})
+        } catch (_) {}
       }
 
       const map = mapRef.current
