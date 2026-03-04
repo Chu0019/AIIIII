@@ -180,6 +180,12 @@ export default function HomePage() {
           zoom: 3,
           renderWorldCopies: false,
         })
+
+        // 盡量使用 globe 投影（若樣式/版本不支援則忽略）
+        try {
+          mapRef.current.setProjection({ type: 'globe' } as any)
+        } catch (_) {}
+        mapRef.current.setFog({})
       }
 
       const map = mapRef.current
