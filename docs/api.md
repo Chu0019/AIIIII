@@ -27,6 +27,11 @@ Base URL：`http://localhost:8000`
 ### `GET /v1/auth/me`
 需 Bearer Token。
 
+## 航路解析
+
+### `GET /v1/route/resolve?dep=RJTT&arr=KSFO&route_text=DCT%20NIPPI%20DCT`
+- 解析 route text，回傳航點清單（機場 + 已知 waypoint）
+
 ## 天氣
 
 ### `GET /v1/weather/{icao}`

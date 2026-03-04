@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 
 from .database import Base, engine, get_db
-from .models import Airport, FlightPlan, User
+from .models import Airport, FlightPlan, User, Waypoint
 from .schemas import (
     AirportOut,
     FlightPlanCreate,
@@ -151,6 +151,35 @@ def list_airports(query: str = Query(default=""), db: Session = Depends(get_db))
     if not q:
         return rows
     return [a for a in rows if q in a.icao.upper() or (a.iata and q in a.iata.upper()) or q in a.name.upper()]
+
+
+@app.get("/v1/route/resolve")
+def resolve_route(dep: str, arr: str, route_text: str = "", db: Session = Depends(get_db)):
+    dep_airport = db.get(Airport, dep.upper())
+    arr_airport = db.get(Airport, arr.upper())
+    if not dep_airport or not arr_airport:
+        raise HTTPException(status_code=404, detail="dep/arr airport not found")
+
+    tokens = [t.strip().upper() for t in route_text.split() if t.strip()]
+    path = [
+        {"ident": dep_airport.icao, "lat": dep_airport.lat, "lon": dep_airport.lon, "type": "airport"}
+    ]
+
+    for t in tokens:
+        if t in {"DCT", "DIRECT"}:
+            continue
+
+        wp = db.execute(select(Waypoint).where(Waypoint.ident == t)).scalars().first()
+        if wp:
+            path.append({"ident": wp.ident, "lat": wp.lat, "lon": wp.lon, "type": "waypoint"})
+            continue
+
+        ap = db.get(Airport, t)
+        if ap:
+            path.append({"ident": ap.icao, "lat": ap.lat, "lon": ap.lon, "type": "airport"})
+
+    path.append({"ident": arr_airport.icao, "lat": arr_airport.lat, "lon": arr_airport.lon, "type": "airport"})
+    return {"dep": dep_airport.icao, "arr": arr_airport.icao, "route_text": route_text, "points": path}
 
 
 @app.get("/v1/weather/{icao}")

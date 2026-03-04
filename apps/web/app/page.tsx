@@ -197,8 +197,21 @@ export default function HomePage() {
       const arrLon = Number(arrAirport.lon)
       if (![depLat, depLon, arrLat, arrLon].every((n) => Number.isFinite(n))) return
 
-      const arc = greatCirclePoints(depLat, depLon, arrLat, arrLon, 96)
-      const lineParts = splitForMap(arc)
+      // 優先使用 route_text 解析後的航點路徑；若無可用航點再 fallback 到大圓弧
+      let baseCoords: number[][] = []
+      try {
+        const rr = await fetch(`${API_BASE}/v1/route/resolve?dep=${dep}&arr=${arr}&route_text=${encodeURIComponent(routeText)}`)
+        if (rr.ok) {
+          const data = await rr.json()
+          baseCoords = (data.points || []).map((p: any) => [Number(p.lon), Number(p.lat)]).filter((c: number[]) => Number.isFinite(c[0]) && Number.isFinite(c[1]))
+        }
+      } catch (_) {}
+
+      if (baseCoords.length < 2) {
+        baseCoords = greatCirclePoints(depLat, depLon, arrLat, arrLon, 96)
+      }
+
+      const lineParts = splitForMap(baseCoords)
       const routeGeo = {
         type: 'FeatureCollection',
         features: [
@@ -343,7 +356,7 @@ export default function HomePage() {
   return (
     <main style={{ padding: 24, maxWidth: 1080, margin: '0 auto' }}>
       <h1>AIIIII · Navi Planner</h1>
-      <p>第 4 批：MapLibre 地圖 + 航線可視化</p>
+      <p>第 5 批：Route Text 解析 + 航點折線地圖</p>
 
       <section style={{ border: '1px solid #ddd', padding: 12, borderRadius: 8 }}>
         <h2>登入 / 註冊</h2>

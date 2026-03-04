@@ -27,6 +27,15 @@ class Airport(Base):
     elevation_ft: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
+class Waypoint(Base):
+    __tablename__ = "waypoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ident: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    lat: Mapped[float] = mapped_column(nullable=False)
+    lon: Mapped[float] = mapped_column(nullable=False)
+
+
 class FlightPlan(Base):
     __tablename__ = "flight_plans"
 
