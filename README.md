@@ -15,6 +15,7 @@
 - `apps/web`：Next.js 前端
 - `infra`：資料庫 Schema
 - `docs`：Roadmap 與 API 文件
+- `packages/shared`：前後端共用型別（shared package）
 
 ---
 
