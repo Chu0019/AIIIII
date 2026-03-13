@@ -357,6 +357,7 @@ export default function HomePage() {
     <main style={{ padding: 24, maxWidth: 1080, margin: '0 auto' }}>
       <h1>AIIIII · Navi Planner</h1>
       <p>第 5 批：Route Text 解析 + 航點折線地圖</p>
+      <p><a href="/quiz">👉 前往空側駕駛考試訓練網頁</a></p>
 
       <section style={{ border: '1px solid #ddd', padding: 12, borderRadius: 8 }}>
         <h2>登入 / 註冊</h2>
