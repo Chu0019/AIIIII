@@ -28,13 +28,33 @@ const BANK: Q[] = [
   { id: 15, q: '桃園機場發布「雷(暴)雨當空」時，所有地面作業應？', options: ['停止', '繼續', '視情況', '無規定'], answer: 0, note: '當空警示下原則停作，依程序例外處理。' },
 ]
 
+function shuffle<T>(arr: T[]) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function pickRandom20(bank: Q[]) {
+  if (bank.length >= 20) return shuffle(bank).slice(0, 20)
+  const out: Q[] = []
+  while (out.length < 20) {
+    const q = bank[Math.floor(Math.random() * bank.length)]
+    out.push(q)
+  }
+  return out
+}
+
 export default function QuizPage() {
+  const [set, setSet] = useState<Q[]>(() => pickRandom20(BANK))
   const [idx, setIdx] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)
   const [score, setScore] = useState(0)
   const [done, setDone] = useState(false)
 
-  const q = useMemo(() => BANK[idx], [idx])
+  const q = useMemo(() => set[idx], [set, idx])
 
   const choose = (i: number) => {
     if (done || picked !== null) return
@@ -43,7 +63,7 @@ export default function QuizPage() {
   }
 
   const next = () => {
-    if (idx + 1 >= BANK.length) {
+    if (idx + 1 >= set.length) {
       setDone(true)
       return
     }
@@ -52,6 +72,7 @@ export default function QuizPage() {
   }
 
   const restart = () => {
+    setSet(pickRandom20(BANK))
     setIdx(0)
     setPicked(null)
     setScore(0)
@@ -63,7 +84,7 @@ export default function QuizPage() {
       <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
         <h1>空側駕駛考試訓練</h1>
         <h2>測驗完成</h2>
-        <p>成績：{score} / {BANK.length}</p>
+        <p>成績：{score} / {set.length}</p>
         <button onClick={restart}>重新開始</button>
       </main>
     )
@@ -72,7 +93,7 @@ export default function QuizPage() {
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
       <h1>空側駕駛考試訓練（網頁版）</h1>
-      <p>第 {idx + 1} 題 / 共 {BANK.length} 題｜目前分數：{score}</p>
+      <p>第 {idx + 1} 題 / 共 {set.length} 題（隨機 20 題）｜目前分數：{score}</p>
 
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ marginTop: 0 }}>Q{q.id}. {q.q}</h2>
